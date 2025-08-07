@@ -28,7 +28,7 @@ jobs:
       - name: Update ebuilds
         id: update-ebuilds
         run: |
-          python scripts/update_ebuilds.py
+          python scripts/update_ebuilds.py --commit
 
   test-ebuild-stable:
     name: "Test ebuild (stable)"
