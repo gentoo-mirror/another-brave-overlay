@@ -26,14 +26,13 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Update ebuilds
-        id: new-ebuilds
+        id: update-ebuilds
         run: |
           python scripts/update_ebuilds.py
 
   test-ebuild-stable:
     name: "Test ebuild (stable)"
     needs: update-ebuilds
-    runs-on: ubuntu-latest
     if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable != '' }}
     uses: ./.github/workflows/test-ebuild.yml
     with:
@@ -42,7 +41,6 @@ jobs:
   test-ebuild-beta:
     name: "Test ebuild (beta)"
     needs: update-ebuilds
-    runs-on: ubuntu-latest
     if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta != '' }}
     uses: ./.github/workflows/test-ebuild.yml
     with:
@@ -51,7 +49,6 @@ jobs:
   test-ebuild-nightly:
     name: "Test ebuild (nightly)"
     needs: update-ebuilds
-    runs-on: ubuntu-latest
     if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly != '' }}
     uses: ./.github/workflows/test-ebuild.yml
     with:
@@ -61,7 +58,7 @@ jobs:
     name: "Notify on failure"
     needs: [test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
     runs-on: ubuntu-latest
-    if: ${{ contains(needs.*.result, 'failure') }}
+    if: failure()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
