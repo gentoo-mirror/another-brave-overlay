@@ -10,15 +10,12 @@ on:
       ebuild:
         required: true
         type: string
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test:
     name: Test Ebuild (${{ inputs.ebuild }})
     runs-on: ubuntu-latest
-    container: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    container: ghcr.io/${{ github.repository }}:latest
 
     steps:
       - name: Checkout repository

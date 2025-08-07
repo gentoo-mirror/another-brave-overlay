@@ -33,13 +33,20 @@ jobs:
   test-ebuilds:
     name: "Test ebuild (${{ matrix.key }})"
     needs: update-ebuilds
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        key: ['stable', 'beta', 'nightly']
-    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds)[matrix.key] != '' }}
+        include:
+          - key: 'stable'
+            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable }}
+          - key: 'beta'
+            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta }}
+          - key: 'nightly'
+            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly }}
+    if: ${{ matrix.ebuild-path != '' }}
     uses: ./.github/workflows/test-ebuild.yml
     with:
-      ebuild-path: ${{ fromJSON(steps.update-ebuilds.outputs.new-ebuilds)[matrix.key] }}
+      ebuild-path: ${{ matrix.ebuild-path }}
 
   notify-on-failure:
     name: "Notify on failure"
