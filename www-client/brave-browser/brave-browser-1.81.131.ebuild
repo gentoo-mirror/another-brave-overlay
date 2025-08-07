@@ -18,7 +18,7 @@ else
 	MY_PN=${PN}
 fi
 
-SRC_URI="https://github.com/brave/brave-browser/releases/download/v${PV}/brave-browser-${PV}_amd64.deb"
+SRC_URI="https://github.com/brave/brave-browser/releases/download/v${PV}/${PN}_${PV}_amd64.deb"
 S=${WORKDIR}
 
 LICENSE="MPL-2.0"
