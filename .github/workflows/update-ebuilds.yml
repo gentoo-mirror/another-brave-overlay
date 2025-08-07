@@ -30,29 +30,38 @@ jobs:
         run: |
           python scripts/update_ebuilds.py
 
-  test-ebuilds:
-    name: "Test ebuild (${{ matrix.key }})"
+  test-ebuild-stable:
+    name: "Test ebuild (stable)"
     needs: update-ebuilds
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - key: 'stable'
-            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable }}
-          - key: 'beta'
-            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta }}
-          - key: 'nightly'
-            ebuild-path: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly }}
-    if: ${{ matrix.ebuild-path != '' }}
+    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable != '' }}
     uses: ./.github/workflows/test-ebuild.yml
     with:
-      ebuild-path: ${{ matrix.ebuild-path }}
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable }}
+
+  test-ebuild-beta:
+    name: "Test ebuild (beta)"
+    needs: update-ebuilds
+    runs-on: ubuntu-latest
+    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta != '' }}
+    uses: ./.github/workflows/test-ebuild.yml
+    with:
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta }}
+
+  test-ebuild-nightly:
+    name: "Test ebuild (nightly)"
+    needs: update-ebuilds
+    runs-on: ubuntu-latest
+    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly != '' }}
+    uses: ./.github/workflows/test-ebuild.yml
+    with:
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly }}
 
   notify-on-failure:
     name: "Notify on failure"
-    needs: test-ebuilds
+    needs: [test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
     runs-on: ubuntu-latest
-    if: ${{ needs.test-ebuilds.result != 'success' }}
+    if: ${{ contains(needs.*.result, 'failure') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
