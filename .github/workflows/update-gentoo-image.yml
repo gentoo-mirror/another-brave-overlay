@@ -17,7 +17,7 @@ jobs:
     permissions:
       # Required to push to GitHub Packages/Container Registry
       packages: write
-      # Required to checkout the repo to access the Dockerfile
+      # Required to check out the repo to access the Dockerfile
       contents: read
 
     steps:
