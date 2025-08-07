@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 🚀 Update Ebuilds
+
+on:
+  # Run every 2 hours
+  schedule:
+    - cron: '22 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-ebuilds:
+    name: "Update ebuilds"
+    runs-on: ubuntu-latest
+    outputs:
+      new-ebuilds: ${{ steps.udapte-ebuilds.outputs.new-ebuilds }}
+    steps:
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+
+      - name: Set git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update ebuilds
+        id: new-ebuilds
+        run: |
+          python scripts/update_ebuilds.py
+
+  test-ebuilds:
+    name: "Test ebuild (${{ matrix.key }})"
+    needs: update-ebuilds
+    strategy:
+      matrix:
+        key: ['stable', 'beta', 'nightly']
+    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds)[matrix.key] != '' }}
+    uses: ./.github/workflows/test-ebuild.yml
+    with:
+      ebuild-path: ${{ fromJSON(steps.update-ebuilds.outputs.new-ebuilds)[matrix.key] }}
+
+  notify-on-failure:
+    name: "Notify on failure"
+    needs: test-ebuilds
+    runs-on: ubuntu-latest
+    if: ${{ needs.test-ebuilds.result != 'success' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send email if any test failed
+        env:
+          NEW_EBUILDS: ${{ needs.update-ebuilds.outputs.new-ebuilds }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python scripts/notify_on_failure.py
