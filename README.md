@@ -9,6 +9,9 @@
 another-brave-overlay
 =====================
 
+[![🚀 Update Ebuilds](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/update-ebuilds.yml/badge.svg)](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/update-ebuilds.yml)
+[![🏗️ Build or Update Gentoo Docker Image](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/gentoo-image.yml/badge.svg)](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/gentoo-image.yml)
+
 This Gentoo overlay provides automatically generated ebuilds for the [Brave browser](https://brave.com/), a privacy-focused, open-source web browser based on Chromium. The ebuilds are based on the official Gentoo Google Chrome ebuilds, adapted to deliver the stable, beta, and nightly versions of Brave via the following ebuilds:
 
 - `www-client/brave-browser` (stable)
