@@ -1,0 +1,138 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 🏗️ Update Gentoo Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      date_tag:
+        required: true
+        type: string
+
+jobs:
+  build-llvm:
+    name: Emerge LLVM
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push LLVM stage
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: './Dockerfile.update'
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}:llvm-step
+          target: llvm
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
+          cache-to: type=inline
+
+  build-clang:
+    name: Emerge Clang
+    needs: build-llvm
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Clang stage
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: './Dockerfile.update'
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}:clang-step
+          target: clang
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:llvm-step
+          cache-to: type=inline
+
+  build-world:
+    name: Emerge @world
+    needs: build-clang
+    runs-on: ubuntu-latest
+    permissions:
+        packages: write
+        contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push @world stage
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: './Dockerfile.update'
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}:world-step
+          target: world
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
+          cache-to: type=inline
+
+  build-final:
+    name: Emerge Chrome Deps & Finalize
+    needs: build-clang
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push final image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: './Dockerfile.update'
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ needs.prepare-build.outputs.date_tag }}
+          target: final
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
+          cache-to: type=inline

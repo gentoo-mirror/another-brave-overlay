@@ -4,18 +4,18 @@ ARG REPO_URL
 FROM ${REPO_URL}:latest AS setup
 RUN emaint sync -a>/dev/null
 
-# STAGE 2: Emerge @world
-FROM setup AS world
-RUN emerge --update --deep --newuse -v @world
-
-# STAGE 3: Emerge LLVM
-FROM world AS llvm
+# STAGE 2: Emerge LLVM
+FROM setup AS llvm
 RUN emerge --update -v llvm-core/llvm
 
-# STAGE 4: Emerge Clang
+# STAGE 3: Emerge Clang
 FROM llvm AS clang
 RUN emerge --update -v llvm-core/clang
 
+# STAGE 4: Emerge @world
+FROM clang AS world
+RUN emerge --update --deep --newuse -v @world
+
 # STAGE 5: Final image
-FROM clang AS final
+FROM world AS final
 RUN emerge --onlydeps -v www-client/google-chrome-unstable

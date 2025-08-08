@@ -52,135 +52,17 @@ jobs:
             echo "build_type=initial" >> $GITHUB_OUTPUT
           fi
 
-  build-world:
-    name: Emerge @world
+  run-build:
+    name: Run Build
     needs: prepare-build
-    runs-on: ubuntu-latest
-    permissions:
-        packages: write
-        contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push @world stage
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ needs.prepare-build.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
-          build-args: REPO_URL=ghcr.io/${{ github.repository }}
-          push: true
-          tags: ghcr.io/${{ github.repository }}:world-step
-          target: world
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
-          cache-to: type=inline
-
-  build-llvm:
-    name: Emerge LLVM
-    needs: build-world
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push LLVM stage
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ needs.build-world.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
-          build-args: REPO_URL=ghcr.io/${{ github.repository }}
-          push: true
-          tags: ghcr.io/${{ github.repository }}:llvm-step
-          target: llvm
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:world-step
-          cache-to: type=inline
-
-  build-clang:
-    name: Emerge Clang
-    needs: build-llvm
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Clang stage
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ needs.build-clang.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
-          build-args: REPO_URL=ghcr.io/${{ github.repository }}
-          push: true
-          tags: ghcr.io/${{ github.repository }}:clang-step
-          target: clang
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:llvm-step
-          cache-to: type=inline
-
-  build-final:
-    name: Emerge Chrome Deps & Finalize
-    needs: [prepare-build, build-clang]
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push final image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ needs.prepare-build.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
-          build-args: REPO_URL=ghcr.io/${{ github.repository }}
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ needs.prepare-build.outputs.date_tag }}
-          target: final
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
-          cache-to: type=inline
+    uses: ./.github/workflows/${{ needs.prepare-build.outputs.build_type == 'initial' && 'gentoo-image-base.yml' || 'gentoo-image-update.yml' }}
+    with:
+      date_tag: ${{ needs.prepare-build.outputs.date_tag }}
+    secrets: inherit
 
   cleanup-ghcr:
     name: Clean up old image tags
-    needs: build-final
+    needs: run-build
     runs-on: ubuntu-latest
     permissions:
       packages: write
