@@ -36,7 +36,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
-          tags: type=schedule,pattern={{date 'YYYYMMDD'}}
+          tags: type=raw,value={{date 'YYYYMMDD-HHmmss'}}
 
       - name: Check for existing image
         id: check_image
