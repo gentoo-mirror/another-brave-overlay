@@ -59,6 +59,9 @@ jobs:
     uses: ./.github/workflows/gentoo-image-base.yml
     with:
       date_tag: ${{ needs.prepare-build.outputs.date_tag }}
+    permissions:
+      packages: write
+      contents: read
     secrets: inherit
 
   run-update-build:
@@ -68,6 +71,9 @@ jobs:
     uses: ./.github/workflows/gentoo-image-update.yml
     with:
       date_tag: ${{ needs.prepare-build.outputs.date_tag }}
+    permissions:
+      packages: write
+      contents: read
     secrets: inherit
 
   cleanup-ghcr:

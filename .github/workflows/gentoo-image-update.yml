@@ -106,7 +106,7 @@ jobs:
 
   build-final:
     name: Emerge Chrome Deps & Finalize
-    needs: build-clang
+    needs: build-world
     runs-on: ubuntu-latest
     permissions:
       packages: write
