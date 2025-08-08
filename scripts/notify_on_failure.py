@@ -12,7 +12,7 @@ import requests
 
 
 def main():
-    new_ebuilds = json.loads(os.environ("NEW_EBUILDS"))
+    new_ebuilds = json.loads(os.environ["NEW_EBUILDS"])
 
     headers = {
         "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
@@ -35,14 +35,12 @@ def main():
             if job["name"] == "update-ebuilds":
                 failed_jobs.append("Update ebuilds")
             elif job["name"].startswith("test-ebuild"):
-                matrix_key = job["name"].split("(")[-1].split(")")[0].strip()
-                failed_jobs.append(
-                    f"Test ebuild ({new_ebuilds.get(matrix_key, 'unknown')})"
-                )
+                key = job["name"].split("(")[-1].split(")")[0].strip()
+                failed_jobs.append(f"Test ebuild ({new_ebuilds.get(key, 'unknown')})")
     if failed_jobs:
         print("Sending email for failed jobs")
 
-        password = os.getenv("GMAIL_APP_PASSWORD")
+        password = os.environ["GMAIL_APP_PASSWORD"]
         email = "falbrechtskirchinger@gmail.com"
 
         msg = MIMEText(
