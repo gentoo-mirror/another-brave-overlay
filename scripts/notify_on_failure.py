@@ -12,7 +12,10 @@ import requests
 
 
 def main():
-    new_ebuilds = json.loads(os.environ["NEW_EBUILDS"])
+    try:
+        new_ebuilds = json.loads(os.environ["NEW_EBUILDS"])
+    except json.decoder.JSONDecodeError:
+        new_ebuilds = dict()
 
     headers = {
         "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
