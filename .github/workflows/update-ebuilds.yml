@@ -35,17 +35,6 @@ jobs:
           python scripts/update_ebuilds.py --commit
           git push
 
-  debug-output:
-    name: "Debug Output"
-    runs-on: ubuntu-latest
-    needs: update-ebuilds
-    if: always()
-    steps:
-      - name: Dump the new_ebuilds output
-        run: |
-          echo "Received new_ebuilds output:"
-          echo "${{ needs.update-ebuilds.outputs.new_ebuilds }}"
-
   test-ebuild-stable:
     name: "Test ebuild (stable)"
     needs: update-ebuilds
@@ -53,6 +42,7 @@ jobs:
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).stable }}
+      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
 
   test-ebuild-beta:
     name: "Test ebuild (beta)"
@@ -61,6 +51,7 @@ jobs:
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).beta }}
+      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
 
   test-ebuild-nightly:
     name: "Test ebuild (nightly)"
@@ -69,10 +60,11 @@ jobs:
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).nightly }}
+      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
 
   notify-on-failure:
     name: "Notify on failure"
-    needs: [test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
+    needs: [update-ebuilds, test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
     runs-on: ubuntu-latest
     if: failure()
 

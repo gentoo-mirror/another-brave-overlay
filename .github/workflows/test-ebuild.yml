@@ -10,16 +10,21 @@ on:
       ebuild:
         required: true
         type: string
+      commit_hash:
+        required: true
+        type: string
 
 jobs:
   test:
-    name: Test Ebuild (${{ inputs.ebuild }})
+    name: Test ebuild (${{ inputs.ebuild }})
     runs-on: ubuntu-latest
     container: ghcr.io/${{ github.repository }}:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_hash }}
 
       - name: Merge ${{ inputs.ebuild }}
         run: |

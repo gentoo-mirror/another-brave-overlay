@@ -194,6 +194,11 @@ def main():
     new_ebuilds = update_ebuilds(new_releases, repo_dir, commit_changes=args.commit)
 
     if "GITHUB_OUTPUT" in os.environ:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+        new_ebuilds["commit_hash"] = result.stdout.strip()
+
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             print(f"new_ebuilds<<EOF\n{json.dumps(new_ebuilds)}\nEOF\n", file=f)
 
