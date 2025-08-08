@@ -27,4 +27,5 @@ jobs:
           ref: ${{ inputs.commit_hash }}
 
       - name: Merge ${{ inputs.ebuild }}
-        run: ebuild ${{ inputs.ebuild }} merge
+        #run: ebuild ${{ inputs.ebuild }} merge
+        run: /bin/false
