@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new-ebuilds: ${{ steps.udapte-ebuilds.outputs.new-ebuilds }}
+    permissions:
+      # Required to push changes to repo
+      contents: write
     steps:
       - name: Checkout your repository
         uses: actions/checkout@v4
@@ -29,10 +32,7 @@ jobs:
         id: update-ebuilds
         run: |
           python scripts/update_ebuilds.py --commit
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git push origin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git push
 
   test-ebuild-stable:
     name: "Test ebuild (stable)"
