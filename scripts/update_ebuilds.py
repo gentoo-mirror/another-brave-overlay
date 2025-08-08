@@ -192,7 +192,7 @@ def main():
 
     if "GITHUB_OUTPUT" in os.environ:
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            print(f"new_ebuilds<<<EOF\n{json.dumps(new_ebuilds)}\nEOF\n", file=f)
+            print(f"new_ebuilds<<EOF\n{json.dumps(new_ebuilds)}\nEOF\n", file=f)
 
 
 if __name__ == "__main__":
