@@ -11,13 +11,11 @@ RUN echo "[binhost]" > /etc/portage/binrepos.conf/gentoobinhost.conf && \
     echo "priority = 9999" >> /etc/portage/binrepos.conf/gentoobinhost.conf && \
     echo "sync-uri = https://distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64/" >> /etc/portage/binrepos.conf/gentoobinhost.conf
 
-RUN emaint sync -r gentoo &> /dev/null && \
-    emerge --update --oneshot -v app-portage/getuto && \
-    getuto && \
-    emaint sync -r binhost
-
 # Match binhost USE flags
 RUN echo "sys-devel/gcc lto pgo" >> /etc/portage/package.use
+
+RUN emaint sync -a > /dev/null
+RUN emerge --update --oneshot -v app-portage/getuto && getuto
 
 RUN emerge --update --deep --newuse -v @world
 RUN emerge --onlydeps -v www-client/google-chrome-unstable
