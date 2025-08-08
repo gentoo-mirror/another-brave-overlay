@@ -1,6 +1,7 @@
-FROM gentoo/stage3
+# STAGE 1: Initial Setup from gentoo/stage3
+FROM gentoo/stage3 AS setup
 
-RUN cat <<-EOF >>/volatile/make.conf
+RUN cat <<-EOF >>/etc/portage/make.conf
 ACCEPT_KEYWORDS="~amd64"
 ACCEPT_LICENSE="*"
 EMERGE_DEFAULT_OPTS="--autounmask=y --autounmask-continue=y --getbinpkg --usepkg --jobs=$(nproc)"
@@ -26,5 +27,18 @@ RUN emaint sync -a >/dev/null && \
     emerge --update --oneshot -v app-portage/getuto && \
     getuto
 
+# STAGE 2: Emerge @world
+FROM setup AS world
 RUN emerge --update --deep --newuse -v @world
+
+# STAGE 3: Emerge LLVM
+FROM world AS llvm
+RUN emerge --update -v llvm-core/llvm
+
+# STAGE 4: Emerge Clang
+FROM llvm AS clang
+RUN emerge --update -v llvm-core/clang
+
+# STAGE 5: Final image
+FROM clang AS final
 RUN emerge --onlydeps -v www-client/google-chrome-unstable

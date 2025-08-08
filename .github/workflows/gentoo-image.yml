@@ -5,20 +5,87 @@
 name: 🏗️ Build or Update Gentoo Docker Image
 
 on:
-  # Run once per week (Monday at 3:33 AM UTC)
   schedule:
     - cron: '33 3 * * 1'
   workflow_dispatch:
     inputs:
-      force-rebuild:
+      force_rebuild:
         description: 'Force a rebuild from gentoo/stage3 instead of updating :latest'
         required: false
         type: boolean
         default: false
 
 jobs:
-  build-and-push:
-    name: Build and Push to GHCR
+  prepare-build:
+    name: Prepare Build
+    runs-on: ubuntu-latest
+    outputs:
+      build_type: ${{ steps.check_image.outputs.build_type }}
+      date_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Date Tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: type=schedule,pattern={{date 'YYYYMMDD'}}
+
+      - name: Check for existing image
+        id: check_image
+        run: |
+          if [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
+            echo "Force rebuild requested."
+            echo "build_type=initial" >> $GITHUB_OUTPUT
+          elif docker manifest inspect ghcr.io/${{ github.repository }}:latest >/dev/null 2>&1; then
+            echo "Image exists. Performing an update."
+            echo "build_type=update" >> $GITHUB_OUTPUT
+          else
+            echo "Image does not exist. Performing initial build."
+            echo "build_type=initial" >> $GITHUB_OUTPUT
+          fi
+
+  build-world:
+    name: Emerge @world
+    needs: prepare-build
+    runs-on: ubuntu-latest
+    permissions:
+        packages: write
+        contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push @world stage
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ needs.prepare-build.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}:world-step
+          target: world
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:latest
+          cache-to: type=inline
+
+  build-llvm:
+    name: Emerge LLVM
+    needs: build-world
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -35,57 +102,90 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=schedule,pattern={{date 'YYYYMMDD'}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Check for existing image
-        id: check-image
-        run: |
-          if [[ "${{ github.event.inputs.force-rebuild }}" == "true" ]]; then
-            echo "Force rebuild requested. Performing initial build."
-            echo "exists=false" >> $GITHUB_OUTPUT
-          elif docker manifest inspect ghcr.io/${{ github.repository }}:latest >/dev/null 2>&1; then
-            echo "Image exists. Performing an update."
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "Image does not exist. Performing initial build."
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Initial build
-        if: steps.check-image.outputs.exists == 'false'
+      - name: Build and push LLVM stage
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.base
+          file: ${{ needs.build-world.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/${{ github.repository }}:llvm-step
+          target: llvm
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:world-step
+          cache-to: type=inline
 
-      - name: Update build
-        if: steps.check-image.outputs.exists == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.update
-          build-args: |
-            REPO_URL=ghcr.io/${{ github.repository }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  cleanup-ghcr:
-    name: Clean up old image tags
-    needs: build-and-push
+  build-clang:
+    name: Emerge Clang
+    needs: build-llvm
     runs-on: ubuntu-latest
     permissions:
       packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Clang stage
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ needs.build-clang.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}:clang-step
+          target: clang
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:llvm-step
+          cache-to: type=inline
+
+  build-final:
+    name: Emerge Chrome Deps & Finalize
+    needs: [prepare-build, build-clang]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push final image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ needs.prepare-build.outputs.build_type == 'initial' && './Dockerfile.base' || './Dockerfile.update' }}
+          build-args: REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ needs.prepare-build.outputs.date_tag }}
+          target: final
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
+          cache-to: type=inline
+
+  cleanup-ghcr:
+    name: Clean up old image tags
+    needs: build-final
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
     steps:
       - name: Delete old container versions
         uses: actions/delete-package-versions@v5
@@ -93,3 +193,4 @@ jobs:
           package-name: ${{ github.event.repository.name }}
           package-type: 'container'
           min-versions-to-keep: 3
+          delete-tags: '*-step'
