@@ -97,7 +97,7 @@ def update_ebuilds(new_releases, repo_dir, commit_changes=False):
 
         new_ebuild = os.path.join(ebuild_dir, f"{name}-{version}.ebuild")
         os.rename(ebuilds[-1], new_ebuild)
-        new_ebuilds[key] = new_ebuild
+        new_ebuilds[key] = os.path.relpath(new_ebuild, repo_dir)
 
         for ebuild in ebuilds[:-1]:
             os.unlink(ebuild)
@@ -192,8 +192,6 @@ def main():
     releases = get_latest_releases()
     new_releases = get_new_releases(releases, repo_dir)
     new_ebuilds = update_ebuilds(new_releases, repo_dir, commit_changes=args.commit)
-
-    print(f"new_ebuilds={json.dumps(new_ebuilds)}")
 
     if "GITHUB_OUTPUT" in os.environ:
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
