@@ -52,17 +52,27 @@ jobs:
             echo "build_type=initial" >> $GITHUB_OUTPUT
           fi
 
-  run-build:
-    name: Run Build
+  run-initial-build:
+    name: Run Initial Build
     needs: prepare-build
-    uses: ./.github/workflows/${{ needs.prepare-build.outputs.build_type == 'initial' && 'gentoo-image-base.yml' || 'gentoo-image-update.yml' }}
+    if: needs.prepare-build.outputs.build_type == 'initial'
+    uses: ./.github/workflows/gentoo-image-base.yml
+    with:
+      date_tag: ${{ needs.prepare-build.outputs.date_tag }}
+    secrets: inherit
+
+  run-update-build:
+    name: Run Update Build
+    needs: prepare-build
+    if: needs.prepare-build.outputs.build_type == 'update'
+    uses: ./.github/workflows/gentoo-image-update.yml
     with:
       date_tag: ${{ needs.prepare-build.outputs.date_tag }}
     secrets: inherit
 
   cleanup-ghcr:
     name: Clean up old image tags
-    needs: run-build
+    needs: [run-initial-build, run-update-build]
     runs-on: ubuntu-latest
     permissions:
       packages: write
