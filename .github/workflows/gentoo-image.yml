@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: 🏗️ Update Gentoo Docker Image
+name: 🏗️ Build or Update Gentoo Docker Image
 
 on:
   # Run once per week (Monday at 3:33 AM UTC)
