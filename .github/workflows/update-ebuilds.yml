@@ -15,7 +15,7 @@ jobs:
     name: "Update ebuilds"
     runs-on: ubuntu-latest
     outputs:
-      new_ebuilds: ${{ steps.updapte-ebuilds.outputs.new_ebuilds }}
+      new_ebuilds: ${{ steps.update-ebuilds.outputs.new_ebuilds }}
     permissions:
       # Required to push changes to repo
       contents: write
