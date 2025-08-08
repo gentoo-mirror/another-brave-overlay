@@ -15,10 +15,11 @@ jobs:
     name: "Update ebuilds"
     runs-on: ubuntu-latest
     outputs:
-      new-ebuilds: ${{ steps.updapte-ebuilds.outputs.new-ebuilds }}
+      new_ebuilds: ${{ steps.updapte-ebuilds.outputs.new_ebuilds }}
     permissions:
       # Required to push changes to repo
       contents: write
+
     steps:
       - name: Checkout your repository
         uses: actions/checkout@v4
@@ -37,39 +38,40 @@ jobs:
   test-ebuild-stable:
     name: "Test ebuild (stable)"
     needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable != ''
+    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).stable != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable }}
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).stable }}
 
   test-ebuild-beta:
     name: "Test ebuild (beta)"
     needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta != ''
+    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).beta != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta }}
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).beta }}
 
   test-ebuild-nightly:
     name: "Test ebuild (nightly)"
     needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly != ''
+    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).nightly != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly }}
+      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).nightly }}
 
   notify-on-failure:
     name: "Notify on failure"
     needs: [test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
     runs-on: ubuntu-latest
     if: failure()
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Send email if any test failed
         env:
-          NEW_EBUILDS: ${{ needs.update-ebuilds.outputs.new-ebuilds }}
+          NEW_EBUILDS: ${{ needs.update-ebuilds.outputs.new_ebuilds }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
