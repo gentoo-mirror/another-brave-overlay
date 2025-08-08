@@ -1,0 +1,30 @@
+FROM gentoo/stage3
+
+RUN cat <<-EOF >>/volatile/make.conf
+ACCEPT_KEYWORDS="~amd64"
+ACCEPT_LICENSE="*"
+EMERGE_DEFAULT_OPTS="--autounmask=y --autounmask-continue=y --getbinpkg --usepkg --jobs=$(nproc)"
+MAKEOPTS="-j$(nproc)"
+FEATURES="getbinpkg -pid-sandbox -ipc-sandbox -network-sandbox"
+EOF
+
+RUN mkdir -p /etc/portage/binrepos.conf/ && \
+    cat <<-EOF >/etc/portage/binrepos.conf/gentoobinhost.conf
+[binhost]
+priority = 9999
+sync-uri = https://distfiles.gentoo.org/releases/amd64/binpackages/23.0/x86-64/
+EOF
+
+# Match binhost USE flags
+RUN cat <<-EOF >>/etc/portage/package.use/use
+media-libs/mesa vulkan wayland
+sys-devel/gcc lto pgo
+x11-libs/libxkbcommon X wayland
+EOF
+
+RUN emaint sync -a >/dev/null && \
+    emerge --update --oneshot -v app-portage/getuto && \
+    getuto
+
+RUN emerge --update --deep --newuse -v @world
+RUN emerge --onlydeps -v www-client/google-chrome-unstable

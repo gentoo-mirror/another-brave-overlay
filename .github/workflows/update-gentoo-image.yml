@@ -9,15 +9,19 @@ on:
   schedule:
     - cron: '33 3 * * 1'
   workflow_dispatch:
+    inputs:
+      force-rebuild:
+        description: 'Force a rebuild from gentoo/stage3 instead of updating :latest'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-push:
     name: Build and Push to GHCR
     runs-on: ubuntu-latest
     permissions:
-      # Required to push to GitHub Packages/Container Registry
       packages: write
-      # Required to check out the repo to access the Dockerfile
       contents: read
 
     steps:
@@ -31,10 +35,61 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Check for existing image
+        id: check-image
+        run: |
+          if [[ "${{ github.event.inputs.force-rebuild }}" == "true" ]]; then
+            echo "Force rebuild requested. Performing initial build."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          elif docker manifest inspect ghcr.io/${{ github.repository }}:latest >/dev/null 2>&1; then
+            echo "Image exists. Performing an update."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Image does not exist. Performing initial build."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Initial build
+        if: steps.check-image.outputs.exists == 'false'
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.base
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Update build
+        if: steps.check-image.outputs.exists == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.update
+          build-args: |
+            REPO_URL=ghcr.io/${{ github.repository }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  cleanup-ghcr:
+    name: Clean up old image tags
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete old container versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ github.event.repository.name }}
+          package-type: 'container'
+          min-versions-to-keep: 3

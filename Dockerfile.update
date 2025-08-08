@@ -1,0 +1,7 @@
+ARG REPO_URL
+FROM ${REPO_URL}:latest
+
+RUN emaint sync -a>/dev/null
+
+RUN emerge --update --deep --newuse -v @world
+RUN emerge --onlydeps -v www-client/google-chrome-unstable
