@@ -132,7 +132,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ needs.prepare-build.outputs.date_tag }}
+            ghcr.io/${{ github.repository }}:${{ inputs.date_tag }}
           target: final
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
           cache-to: type=inline
