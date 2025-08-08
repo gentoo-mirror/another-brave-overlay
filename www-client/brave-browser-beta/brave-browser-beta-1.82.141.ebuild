@@ -89,7 +89,7 @@ src_install() {
 	unpacker
 
 	rm -r etc usr/share/menu || die
-	mv usr/share/doc/${MY_PN} usr/share/doc/${PF} || die
+	mv usr/share/doc/${PN} usr/share/doc/${PF} || die
 
 	gzip -d usr/share/doc/${PF}/changelog.gz || die
 	gzip -d usr/share/man/man1/${MY_PN}.1.gz || die
