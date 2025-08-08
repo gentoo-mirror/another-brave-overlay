@@ -3,9 +3,9 @@
 
 EAPI=8
 
-CHROMIUM_LANGS="af am ar bg bn ca cs da de el en-GB es es-419 et fa fi fil fr gu he
-	hi hr hu id it ja kn ko lt lv ml mr ms nb nl pl pt-BR pt-PT ro ru sk sl sr
-	sv sw ta te th tr uk ur vi zh-CN zh-TW"
+CHROMIUM_LANGS="af am ar az bg bn ca cs da de el en-GB en-US es-419 es et fa fi fil fr
+	gu he hi hr hu id it ja ka kk km kn ko lo lt lv mk ml mn mr ms my nb nl pl pt-BR
+	pt-PT ro ru si sk sl sq sr-Latn sr sv sw ta te th tr uk ur uz vi zh-CN zh-TW"
 
 inherit chromium-2 desktop pax-utils unpacker xdg
 
@@ -110,10 +110,13 @@ src_install() {
 	local suffix=${PN#*browser}
 	suffix=${suffix//-/_}
 
-	local size
+	local size icon_installed=0
 	for size in 16 24 32 48 64 128 256 ; do
-		newicon -s ${size} "${BRAVE_HOME}/product_logo_${size}${suffix}.png" ${PN}.png
+		[[ -f "${BRAVE_HOME}/product_logo_${size}${suffix}.png" ]] && \
+			newicon -s ${size} "${BRAVE_HOME}/product_logo_${size}${suffix}.png" ${PN}.png && \
+			icon_installed=1
 	done
+    [[ ${icon_installed} -eq 0 ]] && die "No program icons could be installed."
 
 	pax-mark m "${BRAVE_HOME}/brave"
 }
