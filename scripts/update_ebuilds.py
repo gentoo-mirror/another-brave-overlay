@@ -8,16 +8,16 @@ import glob
 import hashlib
 import json
 import os
-import requests
 import subprocess
 
+import requests
 
 BRAVE_RELEASES = "https://api.github.com/repos/brave/brave-browser/releases"
 MANIFEST_HASH_ALGOS = ("BLAKE2B", "SHA512")
 
 
 def extract_version(path):
-    return os.path.basename(path).split("-", 2)[-1].rsplit(".", 1)[0]
+    return os.path.basename(path).split("-")[-1].rsplit(".", 1)[0]
 
 
 # For sorting ebuilds by version
@@ -32,7 +32,7 @@ def get_latest_releases():
         "beta": None,
         "nightly": None,
     }
-    have_all_releases = lambda: all(x for x in releases.values())
+    releases_found = 0
 
     headers = {"Accept": "application/vnd.github.v3+json"}
     response = requests.get(BRAVE_RELEASES, headers=headers)
@@ -43,15 +43,21 @@ def get_latest_releases():
             ("beta", "Beta "),
             ("nightly", "Nightly "),
         ):
+            suffix = "" if key == "stable" else f"-{key}"
             if not releases[key] and release["name"].startswith(name):
                 tag = release["tag_name"]
                 assert tag[0] == "v"
-                releases[key] = tag[1:]
+                version = tag[1:]
+                source_file = f"brave-browser{suffix}_{version}_amd64.deb"
+                asset_files = {asset["name"] for asset in release["assets"]}
+                if source_file in asset_files:
+                    releases[key] = tag[1:]
+                    releases_found += 1
 
-        if have_all_releases():
+        if releases_found == len(releases):
             break
 
-    if not have_all_releases():
+    if not releases_found == len(releases):
         raise RuntimeError("Could not find latest release for all channels.")
 
     return releases
@@ -75,6 +81,9 @@ def update_ebuilds(new_releases, repo_dir, commit_changes=False):
     new_ebuilds = dict()
     for key, version in new_releases.items():
         suffix = "" if key == "stable" else f"-{key}"
+        name = f"brave-browser{suffix}"
+        source_file = f"{name}_{version}_amd64.deb"
+        url = f"https://github.com/brave/brave-browser/releases/download/v{version}/{source_file}"
         ebuild_dir = os.path.join(repo_dir, f"www-client/brave-browser{suffix}")
         ebuilds = sorted(
             glob.glob(os.path.join(ebuild_dir, "*.ebuild")), key=version_key
@@ -83,20 +92,17 @@ def update_ebuilds(new_releases, repo_dir, commit_changes=False):
         if len(ebuilds) == 0:
             raise RuntimeError(f"No ebuilds in '{ebuild_dir}'.")
 
-        added = []
-        dropped = []
+        added = [f"{version}"]
+        dropped = [extract_version(ebuilds[-1])]
+
+        new_ebuild = os.path.join(ebuild_dir, f"{name}-{version}.ebuild")
+        os.rename(ebuilds[-1], new_ebuild)
+
         for ebuild in ebuilds[:-1]:
             os.unlink(ebuild)
             dropped.append(extract_version(ebuild))
 
-        pkg = f"brave-browser{suffix}"
-        new_ebuild = os.path.join(ebuild_dir, "{pkg}-{version}.ebuild")
-        os.copy(ebuilds[-1], new_ebuild)
-
-        new_ebuilds[key] = os.path.relpath(new_ebuild, repo_dir)
-        added.append(f"{version}")
-
-        update_manifest(ebuild_dir)
+        update_manifest(ebuild_dir, name)
 
         if commit_changes:
             message = ", ".join(
@@ -115,62 +121,51 @@ def update_ebuilds(new_releases, repo_dir, commit_changes=False):
             )
 
 
-def update_manifest(ebuild_dir):
+def update_manifest(ebuild_dir, name):
     ebuilds = glob.glob(os.path.join(ebuild_dir, "*.ebuild"))
     versions = set(extract_version(ebuild) for ebuild in ebuilds)
     versions_in_manifest = set()
-    sources = {
-        os.path.basename(source.url): source
-        for source in [
-            {
-                "url": f"https://github.com/brave/brave-browser/releases/download/v{version}/brave-browser_{version}_amd64.deb",
-                "version": version,
-            }
-            for version in versions
-        ]
-    }
-
+    sources = [
+        {
+            "file": (filename := f"{name}_{version}_amd64.deb"),
+            "url": f"https://github.com/brave/brave-browser/releases/download/v{version}/{filename}",
+            "version": version,
+        }
+        for version in versions
+    ]
+    sources_by_filename = {source["file"]: source for source in sources}
+    sources_by_version = {source["version"]: source for source in sources}
     with open(os.path.join(ebuild_dir, "Manifest"), "r") as f:
         lines = f.readlines()
         new_lines = []
         for line in lines:
             parts = line.split(" ")
             if parts[0] == "DIST":
-                if parts[1] in sources.keys():
+                if parts[1] in sources_by_filename:
+                    print("  keep")
                     # Keep DIST lines for current ebuilds
                     new_lines.append(line)
-                    versions_in_manifest.append(sources[parts[1]]["version"])
+                    versions_in_manifest.append(
+                        sources_by_filename[parts[1]]["version"]
+                    )
             else:
                 new_lines.append(line)
 
     # Add DIST lines for new ebuilds
     for version in versions - versions_in_manifest:
-        url = next(
-            (
-                source["url"]
-                for source in sources.values()
-                if source["version"] == version
-            ),
-            None,
-        )
-        assert url is not None
+        source = sources_by_version[version]
+        hashers = {algo: hashlib.new(algo.lower()) for algo in MANIFEST_HASH_ALGOS}
+        size = 0
+        with requests.get(source["url"], stream=True, timeout=300) as r:
+            r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=8192):
+                size += len(chunk)
+                for hasher in hashers.values():
+                    hasher.update(chunk)
 
-        response = requests.get(url)
-        response.raise_for_status()
-
-        size = len(response.content)
-
-        def calc_hash(algo, data):
-            h = hashlib.new(algo.lower())
-            h.update(data)
-            return h.hexdigest()
-
-        hashes = [
-            (algo, calc_hash(algo, response.content)) for algo in MANIFEST_HASH_ALGOS
-        ]
-
+        digests = {algo: hasher.hexdigest() for algo, hasher in hashers.items()}
         new_lines.append(
-            f"DIST {os.path.basename(url)} {size} {[' '.join(hash) for hash in hashes]}\n"
+            f"DIST {source['file']} {size} {' '.join([f'{algo} {digest}' for algo, digest in digests.items()])}\n"
         )
 
     with open(os.path.join(ebuild_dir, "Manifest"), "w") as f:
@@ -189,7 +184,7 @@ def main():
     )
     args = parser.parse_args()
 
-    repo_dir = os.join(os.dirname(__file__), "..")
+    repo_dir = os.path.join(os.path.dirname(__file__), "..")
 
     releases = get_latest_releases()
     new_releases = get_new_releases(releases, repo_dir)
