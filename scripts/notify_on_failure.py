@@ -12,11 +12,6 @@ import requests
 
 
 def main():
-    try:
-        new_ebuilds = json.loads(os.environ["NEW_EBUILDS"])
-    except json.decoder.JSONDecodeError:
-        new_ebuilds = dict()
-
     headers = {
         "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
         "Accept": "application/vnd.github.v3+json",
@@ -31,33 +26,29 @@ def main():
 
     print(f"jobs {jobs}")
 
-    failed_jobs = []
-    for job in jobs:
-        print(f"job name {job['name']}")
-        if job["conclusion"] == "failure":
-            if job["name"] == "update-ebuilds":
-                failed_jobs.append("Update ebuilds")
-            elif job["name"].startswith("test-ebuild"):
-                key = job["name"].split("(")[-1].split(")")[0].strip()
-                failed_jobs.append(f"Test ebuild ({new_ebuilds.get(key, 'unknown')})")
+    failed_jobs = [job for job in jobs if job.get("conclusion") == "failure"]
     if failed_jobs:
         print("Sending email for failed jobs")
+
+        lines = ["The following jobs failed in the '🚀 Update Ebuilds' workflow:", ""]
+        for job in failed_jobs:
+            job_name = job.get("name", "Unknown Job")
+            job_url = job.get("html_url", "#")
+            lines.append(f"- {job_name}: {job_url}")
+        body = "\n".join(lines)
 
         password = os.environ["GMAIL_APP_PASSWORD"]
         email = "falbrechtskirchinger@gmail.com"
 
-        msg = MIMEText(
-            "The following workflow jobs have failed:\n\n"
-            + "\n".join([f"  * {job}" for job in failed_jobs])
-        )
+        msg = MIMEText(body)
         msg["Subject"] = "another-brave-overlay: GitHub workflow failed"
         msg["From"] = email
         msg["To"] = email
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls()
-        server.login(email, password)
-        server.send_message(msg)
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(email, password)
+            server.send_message(msg)
 
 
 if __name__ == "__main__":
