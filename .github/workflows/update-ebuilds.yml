@@ -15,7 +15,7 @@ jobs:
     name: "Update ebuilds"
     runs-on: ubuntu-latest
     outputs:
-      new-ebuilds: ${{ steps.udapte-ebuilds.outputs.new-ebuilds }}
+      new-ebuilds: ${{ steps.updapte-ebuilds.outputs.new-ebuilds }}
     permissions:
       # Required to push changes to repo
       contents: write
@@ -37,7 +37,7 @@ jobs:
   test-ebuild-stable:
     name: "Test ebuild (stable)"
     needs: update-ebuilds
-    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable != '' }}
+    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).stable }}
@@ -45,7 +45,7 @@ jobs:
   test-ebuild-beta:
     name: "Test ebuild (beta)"
     needs: update-ebuilds
-    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta != '' }}
+    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).beta }}
@@ -53,7 +53,7 @@ jobs:
   test-ebuild-nightly:
     name: "Test ebuild (nightly)"
     needs: update-ebuilds
-    if: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly != '' }}
+    if: needs.update-ebuilds.outputs.new-ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly != ''
     uses: ./.github/workflows/test-ebuild.yml
     with:
       ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new-ebuilds).nightly }}
