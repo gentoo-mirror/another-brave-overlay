@@ -14,7 +14,7 @@ RUN echo "[binhost]" > /etc/portage/binrepos.conf/gentoobinhost.conf && \
 # Match binhost USE flags
 RUN echo "sys-devel/gcc lto pgo" >> /etc/portage/package.use/use
 
-RUN emaint sync -a > /dev/null
+RUN emaint sync -a >/dev/null
 RUN emerge --update --oneshot -v app-portage/getuto && getuto
 
 RUN emerge --update --deep --newuse -v @world

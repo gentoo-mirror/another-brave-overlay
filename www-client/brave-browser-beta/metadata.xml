@@ -7,10 +7,10 @@
   </maintainer>
   <longdescription>
     Brave is a free, open-source web browser focused on privacy and security. It
-	blocks ads and trackers by default, offers a built-in VPN and firewall, and
-	includes features like private browsing with Tor integration. Brave is built
-	on the Chromium web browser and is available on various platforms including
-	desktop and mobile.
+    blocks ads and trackers by default, offers a built-in VPN and firewall, and
+    includes features like private browsing with Tor integration. Brave is built
+    on the Chromium web browser and is available on various platforms including
+    desktop and mobile.
   </longdescription>
   <upstream>
     <remote-id type="github">brave/brave-browser</remote-id>
