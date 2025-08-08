@@ -117,7 +117,7 @@ def update_ebuilds(new_releases, repo_dir, commit_changes=False):
 
             subprocess.run(["git", "add", ebuild_dir], check=True)
             subprocess.run(
-                ["git", "commit", "-m", "www-client/{pkg}: {message}"], check=True
+                ["git", "commit", "-m", f"www-client/{name}: {message}"], check=True
             )
 
 
