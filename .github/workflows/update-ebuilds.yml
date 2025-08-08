@@ -35,6 +35,17 @@ jobs:
           python scripts/update_ebuilds.py --commit
           git push
 
+  debug-output:
+    name: "Debug Output"
+    runs-on: ubuntu-latest
+    needs: update-ebuilds
+    if: always()
+    steps:
+      - name: Dump the new_ebuilds output
+        run: |
+          echo "Received new_ebuilds output:"
+          echo "${{ needs.update-ebuilds.outputs.new_ebuilds }}"
+
   test-ebuild-stable:
     name: "Test ebuild (stable)"
     needs: update-ebuilds
