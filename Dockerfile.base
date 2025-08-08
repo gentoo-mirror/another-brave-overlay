@@ -2,7 +2,7 @@
 FROM gentoo/stage3 AS setup
 
 RUN cat <<-EOF >>/etc/portage/make.conf
-ACCEPT_KEYWORDS="~amd64"
+ACCEPT_KEYWORDS="amd64"
 ACCEPT_LICENSE="*"
 EMERGE_DEFAULT_OPTS="--autounmask=y --autounmask-continue=y --getbinpkg --usepkg --jobs=2"
 MAKEOPTS="-j$(nproc)"
