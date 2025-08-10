@@ -9,8 +9,10 @@
 another-brave-overlay
 =====================
 
-[![🚀 Update Ebuilds](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/update-ebuilds.yml/badge.svg)](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/update-ebuilds.yml)
-[![🏗️ Build or Update Gentoo Docker Image](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/gentoo-image.yml/badge.svg)](https://github.com/falbrechtskirchinger/another-brave-overlay/actions/workflows/gentoo-image.yml)
+![⚙️ Update ebuilds](https://img.shields.io/github/actions/workflow/status/falbrechtskirchinger/another-brave-overlay/update-ebuilds.yml?style=flat-square&logo=github&label=%E2%9A%99%EF%B8%8F%20Update%20ebuilds)
+![🧪 Merge ebuild (stable)](https://img.shields.io/github/actions/workflow/status/falbrechtskirchinger/another-brave-overlay/test-stable.yml?style=flat-square&logo=github&label=%F0%9F%A7%AA%20Merge%20ebuild%20(stable))
+![🧪 Merge ebuild (beta)](https://img.shields.io/github/actions/workflow/status/falbrechtskirchinger/another-brave-overlay/test-beta.yml?style=flat-square&logo=github&label=%F0%9F%A7%AA%20Merge%20ebuild%20(beta))
+![🧪 Merge ebuild (nightly)](https://img.shields.io/github/actions/workflow/status/falbrechtskirchinger/another-brave-overlay/test-nightly.yml?style=flat-square&logo=github&label=%F0%9F%A7%AA%20Merge%20ebuild%20(nightly))
 
 This Gentoo overlay provides automatically generated ebuilds for the [Brave browser](https://brave.com/), a privacy-focused, open-source web browser based on Chromium. The ebuilds are based on the official Gentoo Google Chrome ebuilds, adapted to deliver the stable, beta, and nightly versions of Brave via the following ebuilds:
 
@@ -65,6 +67,6 @@ License
 
 Ebuilds in this overlay are licensed under the GNU General Public License v2.0 (GPL-2). Scripts and other files are licensed under the MIT License (MIT).
 
-See the LICENSE.GPL-2 and LICENSE.MIT files in the repository for full details.
+See the `LICENSE.GPL-2` and `LICENSE.MIT` files in the repository for full details.
 
 **Trademark Notice**: All Brave logos, marks, and designations are trademarks or registered trademarks of Brave Software, Inc.
