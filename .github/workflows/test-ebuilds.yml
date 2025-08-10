@@ -22,8 +22,6 @@ jobs:
       has_tests: ${{ steps.build-matrix.outputs.test_matrix != '[]' }}
       commit_hash: ${{ steps.resolve-refs.outputs.commit_hash }}
       branch_name: ${{ steps.resolve-refs.outputs.branch_name }}
-    permissions:
-      actions: read
 
     steps:
       - name: Checkout repository
@@ -34,6 +32,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: commit_hash
+          github-token: ${{ secrets.ARTIFACT_PAT }}
           run-id: ${{ github.event.workflow_run.id }}
           path: .
 
