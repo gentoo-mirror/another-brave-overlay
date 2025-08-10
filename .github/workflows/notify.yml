@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 📢 Notify On Failure
+
+on:
+  workflow_run:
+    workflows: ['⚙️ Update ebuilds', '🧪 Merge ebuilds']
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  notify-on-failure:
+    name: "Notify on failure"
+    runs-on: ubuntu-latest
+    env:
+      GMAIL_SECRET_IS_SET: ${{ secrets.GMAIL_APP_PASSWORD != '' }}
+
+    steps:
+      - name: Checkout repository
+        if:  env.GMAIL_SECRET_IS_SET == 'true'
+        uses: actions/checkout@v4
+
+      - name: Send test email
+        if:  env.GMAIL_SECRET_IS_SET == 'true' && github.event_name == 'workflow_dispatch'
+        run: python scripts/notify_on_failure.py --test
+        env:
+          NOTIFICATION_EMAIL: ${{ vars.NOTIFICATION_EMAIL }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+
+      - name: Send email if any steps failed
+        if: env.GMAIL_SECRET_IS_SET == 'true' && github.event_name == 'workflow_run'
+        run: python scripts/notify_on_failure.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTIFICATION_EMAIL: ${{ vars.NOTIFICATION_EMAIL }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: 🚀 Update Ebuilds
+name: ⚙️ Update ebuilds
 
 on:
   # Run every 2 hours
@@ -12,7 +12,7 @@ on:
 
 jobs:
   update-ebuilds:
-    name: "Update ebuilds"
+    name: Update ebuilds
     runs-on: ubuntu-latest
     outputs:
       new_ebuilds: ${{ steps.update-ebuilds.outputs.new_ebuilds }}
@@ -32,49 +32,15 @@ jobs:
       - name: Update ebuilds
         id: update-ebuilds
         run: |
-          python scripts/update_ebuilds.py --commit
+          python scripts/update_ebuilds.py --update --commit --step-summary
           git push
 
-  test-ebuild-stable:
-    name: "Test ebuild (stable)"
-    needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).stable != ''
-    uses: ./.github/workflows/test-ebuild.yml
-    with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).stable }}
-      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
+      - name: Store HEAD commit hash
+        run: git rev-parse HEAD > commit_hash.txt
 
-  test-ebuild-beta:
-    name: "Test ebuild (beta)"
-    needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).beta != ''
-    uses: ./.github/workflows/test-ebuild.yml
-    with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).beta }}
-      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
-
-  test-ebuild-nightly:
-    name: "Test ebuild (nightly)"
-    needs: update-ebuilds
-    if: needs.update-ebuilds.outputs.new_ebuilds != '' && fromJSON(needs.update-ebuilds.outputs.new_ebuilds).nightly != ''
-    uses: ./.github/workflows/test-ebuild.yml
-    with:
-      ebuild: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).nightly }}
-      commit_hash: ${{ fromJSON(needs.update-ebuilds.outputs.new_ebuilds).commit_hash }}
-
-  notify-on-failure:
-    name: "Notify on failure"
-    needs: [update-ebuilds, test-ebuild-stable, test-ebuild-beta, test-ebuild-nightly]
-    runs-on: ubuntu-latest
-    if: failure()
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Send email if any test failed
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: |
-          python scripts/notify_on_failure.py
+      - name: Upload commit hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit_hash
+          path: commit_hash.txt
+          retention-days: 1

@@ -1,0 +1,129 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 🧪 Merge ebuilds
+
+on:
+  push:
+    paths:
+      - "www-client/**"
+  workflow_run:
+    workflows: ['⚙️ Update ebuilds']
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  build-matrix:
+    name: Build test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      test_matrix: ${{ steps.build-matrix.outputs.test_matrix }}
+      has_tests: ${{ steps.build-matrix.outputs.test_matrix != '[]' }}
+      commit_hash: ${{ steps.resolve-refs.outputs.commit_hash }}
+      branch_name: ${{ steps.resolve-refs.outputs.branch_name }}
+    permissions:
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download commit hash
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: commit_hash
+          run-id: ${{ github.event.workflow_run.id }}
+          path: .
+
+      - name: Resolve refs
+        id: resolve-refs
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            HASH="$(cat commit_hash.txt)"
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+          else
+            HASH="${{ github.sha }}"
+            BRANCH="${{ github.ref_name }}"
+          fi
+          echo "commit_hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Build test matrix
+        id: build-matrix
+        run: |
+          args=(--build-test-matrix)
+          if [[ "${{ github.event_name == 'workflow_run' }}" == "true" ]]; then
+            args+=(--new-ebuilds ${{ github.event.workflow_run.head_sha }} ${{ steps.resolve-refs.outputs.commit_hash }})
+          else
+            args+=(--latest-ebuilds)
+          fi
+          python scripts/test_ebuilds.py "${args[@]}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-ebuilds:
+    name: Test ebuild (${{ matrix.ebuild_path }}) [${{ matrix.channel }}]
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository }}:latest
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.build-matrix.outputs.test_matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-matrix.outputs.commit_hash }}
+
+      - name: Merge ebuild
+        run: ebuild ${{ matrix.ebuild_path }} merge
+
+  collect-results:
+    name: Collect test results
+    runs-on: ubuntu-latest
+    needs: [build-matrix, test-ebuilds]
+    if: always()
+    outputs:
+      test_results: ${{ steps.collect-test-results.outputs.test_results }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Collect test results
+        id: collect-test-results
+        run: python scripts/test_ebuilds.py --collect-test-results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  prune-ebuilds:
+    name: Prune ebuilds
+    runs-on: ubuntu-latest
+    needs: [build-matrix, test-ebuilds, collect-results]
+    if: contains(fromJSON(needs.collect-results.outputs.test_results).*.conclusion, 'success')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-matrix.outputs.branch_name }}
+
+      - name: Set git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Reset to target commit
+        run: git reset --hard ${{ needs.build-matrix.outputs.commit_hash }}
+
+      - name: Prune ebuilds
+        run: |
+          python scripts/update_ebuilds.py --prune --prune-checked --commit --step-summary
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

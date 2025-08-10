@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 🛡️ Merge ebuild (stable)
+
+on:
+  workflow_run:
+    workflows: ['🧪 Merge ebuilds']
+    types: [completed]
+
+jobs:
+  check-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Collect test results
+        id: test-results
+        run: python scripts/test_ebuilds.py --collect-test-results --from-event
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report success
+        if: fromJSON(steps.test-results.outputs.test_results).stable.conclusion == 'success'
+        run: echo "✅ Stable channel ebuild passed."
+
+      - name: Report failure
+        if: fromJSON(steps.test-results.outputs.test_results).stable.conclusion != 'success'
+        run: |
+          echo "❌ Stable channel ebuild failed."
+          exit 1
