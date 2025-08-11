@@ -6,20 +6,43 @@
 import argparse
 import difflib
 import os
+import subprocess
 import sys
 
 from shared import (
     BRAVE_TO_CHROME_CHANNELS,
     CHANNELS,
+    GENTOO_PORTAGE_MIRROR,
     GENTOO_REPO,
     get_ebuilds,
     require_gha,
 )
 
 
-def check_for_divergence(repo_dir=None):
+def check_for_divergence(repo_dir=None, use_local_repo=True):
     repo_dir = repo_dir or os.getcwd()
     src_dir = os.path.join(repo_dir, "src_ebuilds")
+    gentoo_dir = GENTOO_REPO if use_local_repo else os.path.join(repo_dir, "gentoo")
+
+    if not use_local_repo:
+        os.makedirs(gentoo_dir, exist_ok=True)
+        subprocess.run(
+            [
+                "rsync",
+                "-avm",
+                "--include",
+                "*/",
+                "--include",
+                "www-client/google-chrome*/",
+                "--include",
+                "www-client/google-chrome*/***",
+                "--exclude",
+                "*",
+                GENTOO_PORTAGE_MIRROR,
+                f"{gentoo_dir}/",
+            ],
+            check=True,
+        )
 
     results = {}
     for channel in CHANNELS:
@@ -31,12 +54,12 @@ def check_for_divergence(repo_dir=None):
         )[0][0]
         gentoo_ebuild = get_ebuilds(
             BRAVE_TO_CHROME_CHANNELS[channel],
-            repo_dir=GENTOO_REPO,
+            repo_dir=gentoo_dir,
             base_name="google-chrome",
             only_latest=True,
         )[0][0]
         src_ebuild_rel = os.path.relpath(src_ebuild, src_dir)
-        gentoo_ebuild_rel = os.path.relpath(gentoo_ebuild, GENTOO_REPO)
+        gentoo_ebuild_rel = os.path.relpath(gentoo_ebuild, gentoo_dir)
         result = {
             "channel": channel,
             "src_ebuild": src_ebuild_rel,
@@ -84,6 +107,11 @@ def main():
         description="Check source ebuilds for divergence from Gentoo Google Chrome ebuilds."
     )
     parser.add_argument(
+        "--local-repo",
+        action="store_true",
+        help="Use local Gentoo Portage repo.",
+    )
+    parser.add_argument(
         "--step-summary",
         action="store_true",
         help="Write a GitHub step summary.",
@@ -97,7 +125,7 @@ def main():
     args = parser.parse_args()
 
     repo_dir = os.path.join(os.path.dirname(__file__), "..")
-    results = check_for_divergence(repo_dir=repo_dir)
+    results = check_for_divergence(repo_dir=repo_dir, use_local_repo=args.local_repo)
     if results:
         print("⚠️ Ebuilds have diverged:")
 

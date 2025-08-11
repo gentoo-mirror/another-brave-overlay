@@ -14,7 +14,6 @@ jobs:
   check-src-ebuilds:
     name: Compare ebuilds
     runs-on: ubuntu-latest
-    container: ghcr.io/${{ github.repository }}:latest
 
     steps:
       - name: Checkout repository

@@ -24,6 +24,7 @@ BRAVE_TO_CHROME_CHANNELS = {
 GH_API_ACTION_JOBS = "https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs"
 
 GENTOO_REPO = "/var/db/repos/gentoo"
+GENTOO_PORTAGE_MIRROR = "rsync://rsync.gentoo.org/gentoo-portage/"
 
 _JOB_NAME_RE = re.compile(r"^Test ebuild \((.+?)\) \[(.+?)\]$")
 _VERSION_REGEX = re.compile(r"-\d[\d\.-r]+")  # TODO

@@ -1,3 +1,4 @@
 /metadata/md5-cache
 __pycache__/
 .*.swp
+/gentoo
