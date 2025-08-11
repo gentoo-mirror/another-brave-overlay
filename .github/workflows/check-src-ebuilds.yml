@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2025 Florian Albrechtskirchinger <falbrechtskirchinger@gmail.com>
+#
+# SPDX-License-Identifier: MIT
+
+name: 🔍 Gentoo Divergence Check
+
+on:
+  workflow_run:
+    workflows: ['🏗️ Build or Update Gentoo Docker Image']
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  check-src-ebuilds:
+    name: Compare ebuilds
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository }}:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compare ebuilds
+        run: python scripts/check_src_ebuilds.py -v --step-summary

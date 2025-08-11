@@ -15,9 +15,15 @@ CHANNELS_WITH_TITLE = [
     ("nightly", "Nightly "),
 ]
 CHANNELS = [channel for channel, _ in CHANNELS_WITH_TITLE]
+BRAVE_TO_CHROME_CHANNELS = {
+    "stable": "stable",
+    "beta": "beta",
+    "nightly": "unstable",
+}
 
 GH_API_ACTION_JOBS = "https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs"
 
+GENTOO_REPO = "/var/db/repos/gentoo"
 
 _JOB_NAME_RE = re.compile(r"^Test ebuild \((.+?)\) \[(.+?)\]$")
 _VERSION_REGEX = re.compile(r"-\d[\d\.-r]+")  # TODO
@@ -47,14 +53,21 @@ def version_key(path):
 
 def make_name_from_channel(channel, base_name="brave-browser"):
     suffix = "" if channel == "stable" else f"-{channel}"
-    name = f"brave-browser{suffix}"
+    name = f"{base_name}{suffix}"
     return name
 
 
-def get_ebuilds(channel, repo_dir=None, only_latest=False, relative_paths=False):
+def get_ebuilds(
+    channel,
+    base_name="brave-browser",
+    repo_dir=None,
+    only_latest=False,
+    relative_paths=False,
+):
     repo_dir = repo_dir or os.getcwd()
 
-    ebuild_dir = os.path.join(repo_dir, f"www-client/{make_name_from_channel(channel)}")
+    name = make_name_from_channel(channel, base_name=base_name)
+    ebuild_dir = os.path.join(repo_dir, f"www-client/{name}")
     ebuilds = sorted(glob.glob(os.path.join(ebuild_dir, "*.ebuild")), key=version_key)
 
     if only_latest:
