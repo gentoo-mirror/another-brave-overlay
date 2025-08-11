@@ -7,7 +7,7 @@ CHROMIUM_LANGS="af am ar az bg bn ca cs da de el en-GB en-US es-419 es et fa fi 
 	gu he hi hr hu id it ja ka kk km kn ko lo lt lv mk ml mn mr ms my nb nl pl pt-BR
 	pt-PT ro ru si sk sl sq sr-Latn sr sv sw ta te th tr uk ur uz vi zh-CN zh-TW"
 
-inherit chromium-2 desktop pax-utils unpacker xdg
+inherit brave chromium-2 desktop pax-utils unpacker xdg
 
 DESCRIPTION="The Brave Web Browser"
 HOMEPAGE="https://brave.com/"
@@ -100,6 +100,10 @@ src_install() {
 
 	pushd "${BRAVE_HOME}/locales" > /dev/null || die
 	chromium_remove_language_paks
+	popd > /dev/null || die
+
+	pushd "${BRAVE_HOME}/resources/brave_extension/_locales" > /dev/null || die
+	brave_remove_language_dirs
 	popd > /dev/null || die
 
 	rm "${BRAVE_HOME}/libqt5_shim.so" || die
