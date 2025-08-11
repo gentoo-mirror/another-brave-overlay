@@ -6,6 +6,7 @@
 import argparse
 import glob
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -278,6 +279,12 @@ def main():
         action="store_true",
         help="Write a GitHub step summary.",
     )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output.",
+    )
     args = parser.parse_args()
 
     new_ebuilds = None
@@ -286,6 +293,8 @@ def main():
 
     if args.update:
         new_ebuilds = update_ebuilds(repo_dir=repo_dir, commit_changes=args.commit)
+        if args.verbose:
+            print(json.dumps(new_ebuilds, indent=2))
 
     if args.prune:
         pruned_ebuilds = prune_ebuilds(
@@ -293,6 +302,8 @@ def main():
             commit_changes=True,
             successful_channels_only=args.prune_checked,
         )
+        if args.verbose:
+            print(json.dumps(pruned_ebuilds, indent=2))
 
     if args.step_summary:
         write_step_summary(new_ebuilds, pruned_ebuilds)

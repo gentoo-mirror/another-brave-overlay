@@ -52,7 +52,7 @@ jobs:
       - name: Build test matrix
         id: build-matrix
         run: |
-          args=(--build-test-matrix)
+          args=(-v --build-test-matrix)
           if [[ "${{ github.event_name == 'workflow_run' }}" == "true" ]]; then
             args+=(--new-ebuilds ${{ github.event.workflow_run.head_sha }} ${{ steps.resolve-refs.outputs.commit_hash }})
           else
@@ -94,7 +94,7 @@ jobs:
 
       - name: Collect test results
         id: collect-test-results
-        run: python scripts/test_ebuilds.py --collect-test-results
+        run: python scripts/test_ebuilds.py -v --collect-test-results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -122,7 +122,7 @@ jobs:
 
       - name: Prune ebuilds
         run: |
-          python scripts/update_ebuilds.py --prune --prune-checked --commit --step-summary
+          python scripts/update_ebuilds.py -v --prune --prune-checked --commit --step-summary
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -32,7 +32,7 @@ jobs:
       - name: Update ebuilds
         id: update-ebuilds
         run: |
-          python scripts/update_ebuilds.py --update --commit --step-summary
+          python scripts/update_ebuilds.py -v --update --commit --step-summary
           git push
 
       - name: Store HEAD commit hash

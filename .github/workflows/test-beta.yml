@@ -18,7 +18,7 @@ jobs:
 
       - name: Collect test results
         id: test-results
-        run: python scripts/test_ebuilds.py --collect-test-results --from-event
+        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

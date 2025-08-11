@@ -63,9 +63,8 @@ def build_test_matrix(mode, commits=None):
             key=lambda ebuild: [os.path.dirname(ebuild)] + version_key(ebuild)
         )
         name_to_channel = {
-            f"www-client/{name}/": channel
+            f"www-client/{make_name_from_channel(channel)[0]}/": channel
             for channel in CHANNELS
-            for name, _ in make_name_from_channel(channel)
         }
 
         for ebuild in new_ebuilds:
@@ -80,7 +79,7 @@ def build_test_matrix(mode, commits=None):
     else:
         raise ValueError(f"Invalid mode '{mode}'.")
 
-    set_output("test_matrix", json.dumps(matrix))
+    return matrix
 
 
 def main():
@@ -115,17 +114,28 @@ def main():
         action="store_true",
         help="Obtain run ID from workflow_run event.",
     )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output.",
+    )
     args = parser.parse_args()
 
     require_gha()
 
     if args.build_test_matrix:
         mode = "new-ebuilds" if args.new_ebuilds else "latest-ebuilds"
-        build_test_matrix(mode, commits=args.new_ebuilds or None)
+        test_matrix = build_test_matrix(mode, commits=args.new_ebuilds or None)
+        set_output("test_matrix", json.dumps(test_matrix))
+        if args.verbose:
+            print(json.dumps(test_matrix, indent=2))
+
 
     if args.collect_test_results:
         test_results = collect_test_results(from_event=args.from_event)
         set_output("test_results", json.dumps(test_results))
+        if args.verbose:
+            print(json.dumps(test_results, indent=2))
 
 
 if __name__ == "__main__":
