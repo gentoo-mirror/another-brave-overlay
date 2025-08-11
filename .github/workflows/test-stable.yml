@@ -18,16 +18,24 @@ jobs:
 
       - name: Collect test results
         id: test-results
-        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event
+        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event --read-variables
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INTEGRATION_PAT }}
 
-      - name: Report success
-        if: fromJSON(steps.test-results.outputs.test_results).stable.conclusion == 'success'
-        run: echo "✅ Stable channel ebuild passed."
-
-      - name: Report failure
-        if: fromJSON(steps.test-results.outputs.test_results).stable.conclusion != 'success'
+      - name: Report status
         run: |
-          echo "❌ Stable channel ebuild failed."
-          exit 1
+          if [[ -z "${{ fromJSON(steps.test-results.outputs.test_results).stable.conclusion }}" ]]; then
+            echo "⚠️ No 'stable' test result available."
+            exit 1
+          elif [[ "${{ fromJSON(steps.test-results.outputs.test_results).stable.cached }}" == "true" ]]; then
+            echo "💡 Test result is cached."
+          fi
+
+          if [[ "${{ fromJSON(steps.test-results.outputs.test_results).stable.conclusion }}" == "success"  ]]; then
+            echo "✅ 'Stable' ebuild merge succeeded."
+            exit 0
+          else
+            echo "❌ 'Stable' ebuild merge failed."
+            exit 1
+          fi

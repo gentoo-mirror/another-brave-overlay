@@ -18,16 +18,24 @@ jobs:
 
       - name: Collect test results
         id: test-results
-        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event
+        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event --read-variables
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INTEGRATION_PAT }}
 
-      - name: Report success
-        if: fromJSON(steps.test-results.outputs.test_results).nightly.conclusion == 'success'
-        run: echo "✅ Nightly channel ebuild passed."
-
-      - name: Report failure
-        if: fromJSON(steps.test-results.outputs.test_results).nightly.conclusion != 'success'
+      - name: Report status
         run: |
-          echo "❌ Nightly channel ebuild failed."
-          exit 1
+          if [[ -z "${{ fromJSON(steps.test-results.outputs.test_results).nightly.conclusion }}" ]]; then
+            echo "⚠️ No 'nightly' test result available."
+            exit 1
+          elif [[ "${{ fromJSON(steps.test-results.outputs.test_results).nightly.cached }}" == "true" ]]; then
+            echo "💡 Test result is cached."
+          fi
+
+          if [[ "${{ fromJSON(steps.test-results.outputs.test_results).nightly.conclusion }}" == "success" ]]; then
+            echo "✅ 'Nightly' ebuild merge succeeded."
+            exit 0
+          else
+            echo "❌ 'Nightly' ebuild merge failed."
+            exit 1
+          fi

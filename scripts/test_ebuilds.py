@@ -115,7 +115,18 @@ def main():
         help="Obtain run ID from workflow_run event.",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--read-variables",
+        action="store_true",
+        help="Read variables.",
+    )
+    parser.add_argument(
+        "--write-variables",
+        action="store_true",
+        help="Write variables.",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
         action="store_true",
         help="Enable verbose output.",
     )
@@ -130,9 +141,12 @@ def main():
         if args.verbose:
             print(json.dumps(test_matrix, indent=2))
 
-
     if args.collect_test_results:
-        test_results = collect_test_results(from_event=args.from_event)
+        test_results = collect_test_results(
+            from_event=args.from_event,
+            read_variables=args.read_variables,
+            write_variables=args.write_variables,
+        )
         set_output("test_results", json.dumps(test_results))
         if args.verbose:
             print(json.dumps(test_results, indent=2))

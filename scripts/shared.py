@@ -6,6 +6,7 @@ import glob
 import json
 import os
 import re
+import subprocess
 
 import requests
 
@@ -133,20 +134,82 @@ def set_output(name, value):
         f.write(f"{name}<<-EOF\n{value}\n-EOF\n")
 
 
-def collect_test_results(from_event=False):
+def gh_get_variable(var, default=None, raw=False):
+    if os.environ.get("GH_TOKEN") is None:
+        raise RuntimeError("GH_TOKEN environment variable unset or empty.")
+
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "variable",
+                "get",
+                var,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        value = result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        if e.returncode != 1:
+            raise e
+        value = None
+
+    if not raw:
+        value = json.loads(value) if value else default
+
+    return value
+
+
+def gh_set_variable(var, value, raw=False):
+    if os.environ.get("GH_TOKEN") is None:
+        raise RuntimeError("GH_TOKEN environment variable unset or empty.")
+
+    value = value if raw else json.dumps(value)
+
+    subprocess.run(
+        [
+            "gh",
+            "variable",
+            "set",
+            var,
+        ],
+        check=True,
+        input=str(value).encode(),
+    )
+
+
+def collect_test_results(from_event=False, read_variables=False, write_variables=False):
     run_id = get_run_id(from_event=from_event)
     jobs = get_run_jobs(run_id)
     test_results = {}
     for job in jobs:
+        if job["conclusion"] == "skipped":
+            continue
         job_name = job.get("name", "")
+        assert "${{" not in job_name
         match = _JOB_NAME_RE.match(job_name)
         if match:
             ebuild_path, channel = match.groups()
-
             test_results[channel] = {
                 "conclusion": job.get("conclusion"),
                 "ebuild_path": ebuild_path,
                 "version": extract_version(ebuild_path),
             }
+
+    for channel in CHANNELS:
+        var = f"TEST_RESULT_{channel.upper()}"
+        if channel in test_results:
+            if write_variables and test_results[channel]["conclusion"] in (
+                "success",
+                "failure",
+            ):
+                gh_set_variable(var, test_results[channel])
+            test_results[channel]["cached"] = False
+        elif read_variables:
+            if result := gh_get_variable(var):
+                test_results[channel] = result
+                test_results[channel]["cached"] = True
 
     return test_results

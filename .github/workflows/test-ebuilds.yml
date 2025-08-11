@@ -29,7 +29,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: commit_hash
-          github-token: ${{ secrets.ARTIFACT_PAT }}
+          github-token: ${{ secrets.INTEGRATION_PAT }}
           run-id: ${{ github.event.workflow_run.id }}
           path: .
 
@@ -96,11 +96,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Collect test results
+      - name: Collect and cache test results
         id: collect-test-results
-        run: python scripts/test_ebuilds.py -v --collect-test-results
+        run: python scripts/test_ebuilds.py -v --collect-test-results --write-variables
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INTEGRATION_PAT }}
 
   prune-ebuilds:
     name: Prune ebuilds

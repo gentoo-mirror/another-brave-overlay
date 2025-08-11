@@ -18,16 +18,24 @@ jobs:
 
       - name: Collect test results
         id: test-results
-        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event
+        run: python scripts/test_ebuilds.py -v --collect-test-results --from-event --read-variables
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INTEGRATION_PAT }}
 
-      - name: Report success
-        if: fromJSON(steps.test-results.outputs.test_results).beta.conclusion == 'success'
-        run: echo "✅ Beta channel ebuild passed."
-
-      - name: Report failure
-        if: fromJSON(steps.test-results.outputs.test_results).beta.conclusion != 'success'
+      - name: Report status
         run: |
-          echo "❌ Beta channel ebuild failed."
-          exit 1
+          if [[ -z "${{ fromJSON(steps.test-results.outputs.test_results).beta.conclusion }}" ]]; then
+            echo "⚠️ No 'beta' test result available."
+            exit 1
+          elif [[ "${{ fromJSON(steps.test-results.outputs.test_results).beta.cached }}" == "true" ]]; then
+            echo "💡 Test result is cached."
+          fi
+
+          if [[ "${{ fromJSON(steps.test-results.outputs.test_results).beta.conclusion }}" == "success" ]]; then
+            echo "✅ 'Beta' ebuild merge succeeded."
+            exit 0
+          else
+            echo "❌ 'Beta' ebuild merge failed."
+            exit 1
+          fi
