@@ -216,7 +216,7 @@ def prune_ebuilds(repo_dir=None, commit_changes=False, successful_channels_only=
     return pruned_ebuilds
 
 
-def write_step_summary(new_ebuilds, pruned_ebuilds):
+def write_step_summary(title, ebuilds=None):
     require_gha()
 
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -224,29 +224,31 @@ def write_step_summary(new_ebuilds, pruned_ebuilds):
         raise RuntimeError("GITHUB_STEP_SUMMARY environment variable unset or empty.")
 
     with open(summary_file, "a") as f:
-        if new_ebuilds:
-            f.write("### ✨ New ebuilds were added:\n\n")
-            for channel in CHANNELS:  # Iterate new ebuilds in channel order
-                if not channel in new_ebuilds:
+        f.write(f"### {title}\n\n")
+        if ebuilds:
+            for channel in CHANNELS:  # Iterate ebuilds in channel order
+                if not channel in ebuilds:
                     continue
                 name, _ = make_name_from_channel(channel)
-                for version in new_ebuilds[channel]:
+                for version in ebuilds[channel]:
                     f.write(
                         f"- **{channel.capitalize()}**: `www-client/{name}-{version}`\n"
                     )
             f.write("\n")
 
-        if pruned_ebuilds:
-            f.write("### 🧹 Old ebuilds were removed:\n\n")
-            for channel in CHANNELS:  # Iterate pruned ebuilds in channel order
-                if not channel in pruned_ebuilds:
-                    continue
-                name, _ = make_name_from_channel(channel)
-                for version in pruned_ebuilds[channel]:
-                    f.write(
-                        f"- **{channel.capitalize()}**: `www-client/{name}-{version}`\n"
-                    )
-            f.write("\n")
+
+def write_step_summary_new_ebuilds(new_ebuilds):
+    if new_ebuilds:
+        write_step_summary("✨ New ebuilds were added:", new_ebuilds)
+    else:
+        write_step_summary("⚪ No new ebuilds were added!")
+
+
+def write_step_summary_pruned_ebuilds(pruned_ebuilds):
+    if pruned_ebuilds:
+        write_step_summary("🧹 Old ebuilds were removed:", pruned_ebuilds)
+    else:
+        write_step_summary("⚪ No ebuilds were pruned!")
 
 
 def main():
@@ -295,6 +297,8 @@ def main():
         new_ebuilds = update_ebuilds(repo_dir=repo_dir, commit_changes=args.commit)
         if args.verbose:
             print(json.dumps(new_ebuilds, indent=2))
+        if args.step_summary:
+            write_step_summary_new_ebuilds(new_ebuilds)
 
     if args.prune:
         pruned_ebuilds = prune_ebuilds(
@@ -304,9 +308,8 @@ def main():
         )
         if args.verbose:
             print(json.dumps(pruned_ebuilds, indent=2))
-
-    if args.step_summary:
-        write_step_summary(new_ebuilds, pruned_ebuilds)
+        if args.step_summary:
+            write_step_summary_pruned_ebuilds(pruned_ebuilds)
 
 
 if __name__ == "__main__":
