@@ -24,9 +24,6 @@ jobs:
       branch_name: ${{ steps.resolve-refs.outputs.branch_name }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Download commit hash
         if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
@@ -48,6 +45,12 @@ jobs:
           fi
           echo "commit_hash=$HASH" >> "$GITHUB_OUTPUT"
           echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve-refs.outputs.commit_hash }}
+          fetch-depth: 4
 
       - name: Build test matrix
         id: build-matrix
