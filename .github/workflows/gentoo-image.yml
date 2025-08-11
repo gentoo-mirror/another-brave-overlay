@@ -41,6 +41,16 @@ jobs:
       - name: Check for existing image
         id: check_image
         run: |
+          # Force rebuild once every quarter
+          month=$(date +%-m)
+          quarter=$(( (($month - 1) / 3) + 1 ))
+          day=$(date +%-d)
+          if (( day <= 7 && ((month - 1) % 3 == 0) )); then
+            echo "It's the first run of Q$quarter; forcing rebuild."
+            echo "build_type=initial" >> $GITHUB_OUTPUT
+            exit
+          fi
+
           if [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
             echo "Force rebuild requested."
             echo "build_type=initial" >> $GITHUB_OUTPUT
