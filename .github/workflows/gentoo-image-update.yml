@@ -134,5 +134,5 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.date_tag }}
           target: final
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:clang-step
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:world-step
           cache-to: type=inline
