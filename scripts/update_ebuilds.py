@@ -73,7 +73,7 @@ def get_new_releases(releases, repo_dir=None):
     for channel, version in releases.items():
         ebuilds, _ = get_ebuilds(channel, repo_dir=repo_dir)
         ebuild_versions = {extract_version(ebuild) for ebuild in ebuilds}
-        if not version in ebuild_versions:
+        if version not in ebuild_versions:
             new_releases[channel] = version
 
     return new_releases
@@ -225,7 +225,7 @@ def write_step_summary(title, ebuilds=None):
         f.write(f"### {title}\n\n")
         if ebuilds:
             for channel in CHANNELS:  # Iterate ebuilds in channel order
-                if not channel in ebuilds:
+                if channel not in ebuilds:
                     continue
                 name = make_name_from_channel(channel)
                 for version in ebuilds[channel]:
