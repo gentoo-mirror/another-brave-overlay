@@ -5,9 +5,8 @@
 name: 🔍 Gentoo Divergence Check
 
 on:
-  workflow_run:
-    workflows: ['🏗️ Build or Update Gentoo Docker Image']
-    types: [completed]
+  schedule:
+    - cron: '44 4 * * *'
   workflow_dispatch:
 
 jobs:
