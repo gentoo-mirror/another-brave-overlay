@@ -41,12 +41,12 @@ def get_latest_releases():
         response = gh_get(url)
         for release in response.json():
             for channel, title in CHANNELS_WITH_TITLE:
-                name, _ = make_name_from_channel(channel)
                 if not releases[channel] and release["name"].startswith(title):
                     tag = release["tag_name"]
                     assert tag[0] == "v"
                     version = tag[1:]
 
+                    name = make_name_from_channel(channel)
                     source_file = BRAVE_SOURCE_FILE.format(name=name, version=version)
                     asset_files = {asset["name"] for asset in release["assets"]}
                     if source_file in asset_files:
@@ -130,15 +130,13 @@ def update_manifest(ebuild_dir, name):
 def add_ebuilds_for_new_releases(new_releases, repo_dir, commit_changes=False):
     new_ebuilds = dict()
     for channel, version in new_releases.items():
-        name, _ = make_name_from_channel(channel)
-
         ebuilds, ebuild_dir = get_ebuilds(channel, repo_dir=repo_dir, only_latest=True)
         if len(ebuilds) == 0:
             raise RuntimeError(f"No ebuilds for release channel '{channel}'.")
         latest_ebuild = ebuilds[0]
-        new_ebuild = os.path.join(
-            ebuild_dir, EBUILD_FILE.format(name=name, version=version)
-        )
+        name = make_name_from_channel(channel)
+        filename = EBUILD_FILE.format(name=name, version=version)
+        new_ebuild = os.path.join(ebuild_dir, filename)
 
         shutil.copy(latest_ebuild, new_ebuild)
         update_manifest(ebuild_dir, name)
@@ -183,11 +181,11 @@ def prune_ebuilds(repo_dir=None, commit_changes=False, successful_channels_only=
         channels = CHANNELS
 
     for channel in channels:
-        name, _ = make_name_from_channel(channel)
         ebuilds, ebuild_dir = get_ebuilds(channel, repo_dir=repo_dir)
 
         if len(ebuilds) > 1:
             dropped = []
+            name = make_name_from_channel(channel)
             for ebuild in ebuilds[:-1]:
                 if commit_changes:
                     subprocess.run(["git", "rm", ebuild], check=True)
@@ -229,7 +227,7 @@ def write_step_summary(title, ebuilds=None):
             for channel in CHANNELS:  # Iterate ebuilds in channel order
                 if not channel in ebuilds:
                     continue
-                name, _ = make_name_from_channel(channel)
+                name = make_name_from_channel(channel)
                 for version in ebuilds[channel]:
                     f.write(
                         f"- **{channel.capitalize()}**: `www-client/{name}-{version}`\n"

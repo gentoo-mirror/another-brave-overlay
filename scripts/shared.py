@@ -45,17 +45,16 @@ def version_key(path):
     return [int(part) for part in version.split(".")] + [revision]
 
 
-def make_name_from_channel(channel):
+def make_name_from_channel(channel, base_name="brave-browser"):
     suffix = "" if channel == "stable" else f"-{channel}"
     name = f"brave-browser{suffix}"
-    return name, suffix
+    return name
 
 
 def get_ebuilds(channel, repo_dir=None, only_latest=False, relative_paths=False):
     repo_dir = repo_dir or os.getcwd()
 
-    name, _ = make_name_from_channel(channel)
-    ebuild_dir = os.path.join(repo_dir, f"www-client/{name}")
+    ebuild_dir = os.path.join(repo_dir, f"www-client/{make_name_from_channel(channel)}")
     ebuilds = sorted(glob.glob(os.path.join(ebuild_dir, "*.ebuild")), key=version_key)
 
     if only_latest:

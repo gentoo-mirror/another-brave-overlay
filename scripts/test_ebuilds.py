@@ -63,7 +63,7 @@ def build_test_matrix(mode, commits=None):
             key=lambda ebuild: [os.path.dirname(ebuild)] + version_key(ebuild)
         )
         name_to_channel = {
-            f"www-client/{make_name_from_channel(channel)[0]}/": channel
+            f"www-client/{make_name_from_channel(channel)}/": channel
             for channel in CHANNELS
         }
 
