@@ -68,6 +68,7 @@ jobs:
   test-ebuilds:
     name: Test ebuild (${{ matrix.ebuild_path }}) [${{ matrix.channel }}]
     needs: build-matrix
+    if: needs.build-matrix.outputs.test_matrix != '[]'
     runs-on: ubuntu-latest
     container: ghcr.io/${{ github.repository }}:latest
     strategy:
