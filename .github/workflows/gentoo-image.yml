@@ -79,6 +79,7 @@ jobs:
   cleanup-ghcr:
     name: Clean up old image tags
     needs: [run-initial-build, run-update-build]
+    if: always()
     runs-on: ubuntu-latest
     permissions:
       packages: write
