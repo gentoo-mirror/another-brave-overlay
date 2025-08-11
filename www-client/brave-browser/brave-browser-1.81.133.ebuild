@@ -116,7 +116,7 @@ src_install() {
 			newicon -s ${size} "${BRAVE_HOME}/product_logo_${size}${suffix}.png" ${PN}.png && \
 			icon_installed=1
 	done
-    [[ ${icon_installed} -eq 0 ]] && die "No program icons could be installed."
+	[[ ${icon_installed} -eq 0 ]] && die "No program icons could be installed."
 
 	pax-mark m "${BRAVE_HOME}/brave"
 }
