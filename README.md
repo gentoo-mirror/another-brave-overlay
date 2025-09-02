@@ -31,7 +31,7 @@ To install Brave from this overlay, follow these steps:
 1. Add the overlay:
 
     ```sh
-    eselect repository add another-brave-overlay git https://github.com/falbrechtskirchinger/another-brave-overlay.git
+    eselect repository enable another-brave-overlay
     ```
 
 2. Sync the overlay to download the ebuilds:

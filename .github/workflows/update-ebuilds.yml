@@ -5,9 +5,9 @@
 name: ⚙️ Update ebuilds
 
 on:
-  # Run every 2 hours
+  # Run every 3 hours
   schedule:
-    - cron: '22 */2 * * *'
+    - cron: '30 */3 * * *'
   workflow_dispatch:
 
 jobs:
