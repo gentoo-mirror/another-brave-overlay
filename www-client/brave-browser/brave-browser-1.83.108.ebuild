@@ -88,8 +88,12 @@ src_install() {
 	cd "${ED}" || die
 	unpacker
 
-	rm -r etc usr/share/menu || die
 	mv usr/share/doc/${PN} usr/share/doc/${PF} || die
+
+	# Since M141 Chromium comes with its own bundled cron
+	# scripts which invoke `apt` directly. Useless on Gentoo!
+	rm -r etc/cron.daily || die "Failed to remove cron scripts"
+	rm -r "${BRAVE_HOME}"/cron || die "Failed to remove cron scripts"
 
 	gzip -d usr/share/doc/${PF}/changelog.gz || die
 	gzip -d usr/share/man/man1/${MY_PN}.1.gz || die
